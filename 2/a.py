@@ -13,5 +13,4 @@ for line in lines:
     area = 2 * a + 2 * b + 2 * c + min(a, b, c)
     sqft += area
 
-
 print "Need " + str(sqft)
