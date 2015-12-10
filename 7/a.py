@@ -2,73 +2,21 @@ import re
 
 __author__ = 'caleb'
 
-dependencies = {}
-values = {}
-gates = {}
+known = True
+hidden = False
+discovered = {}
+undiscovered = {}
+status = {}
+
 
 class Wire:
-    def __init__(self, name, type, input_1, input_2):
-        self.name = name
-        self.type = type
-        self.input_1 = input_1
-        self.input_2 = input_2
-        self.value = None
-
-
-def lookup(element):
-    element = str(element)
-    if dependencies.get(element) is None:
-        if values.get(element) is None:
-            print "I couldn't find " + str(element)
-        else:
-            return values.get(element)
-    else:
-        gate_type = gates.get(element)
-        if gate_type is None:
-            print "Couldn't get the gate for " + str(element)
-        else:
-            if gate_type == 'NOT':
-                result = lookup(dependencies.get(element)[0])
-                result = ~int(result)
-                values[element] = result
-                resolve(element)
-            elif gate_type == 'IS':
-                result = lookup(dependencies.get(element)[0])
-                result = int(result)
-                values[element] = result
-                resolve(element)
-            elif gate_type == 'LSHIFT':
-                amount = int(dependencies[element][1])
-                shift = int(lookup(dependencies[element][0]))
-                result = shift << amount
-                values[element] = result
-                resolve(element)
-            elif gate_type == 'RSHIFT':
-                amount = int(dependencies[element][1])
-                shift = int(lookup(dependencies[element][0]))
-                result = shift >> amount
-                values[element] = result
-                resolve(element)
-            elif gate_type == 'AND':
-                first = int(lookup(dependencies[element][0]))
-                second = int(lookup(dependencies[element][1]))
-                result = first & second
-                values[element] = result
-                resolve(element)
-            elif gate_type == 'OR':
-                first = int(lookup(dependencies[element][0]))
-                second = int(lookup(dependencies[element][1]))
-                result = first | second
-                values[element] = result
-                resolve(element)
-            return values.get(element)
-
-
-def resolve(element):
-    # del dependencies[element]
-    # if gates.get(element) is not None:
-    #     del gates[element]
-    pass
+    def __init__(self, name, gate, input_1, input_2=None, two_inputs=False):
+        self.name = name  # string
+        self.gate = gate  # string
+        self.input_1 = input_1  # string
+        self.input_2 = input_2  # string
+        self.value = None  # integer
+        self.two_inputs = two_inputs  # boolean
 
 
 def is_number(s):
@@ -83,28 +31,100 @@ with open('a.txt') as f:
     lines = f.readlines()
 
 for line in lines:
-    simple = re.search(r"^(\d*) -> (\s*)", line)
-    invert = re.search(r"^NOT (\w*) -> (\w*)", line)
-    catch = re.search(r"^(\w*) (\w*) (\w*) -> (\w*)", line)
+    simple = re.search(r"^(\w*) -> (\w*)", line)  # input_1 -> name
+    invert = re.search(r"^NOT (\w*) -> (\w*)", line)  # NOT input_1 -> name
+    catch = re.search(r"^(\w*) (\w*) (\w*) -> (\w*)", line)  # input_1 GATE input_2 -> name
     if simple:
         if is_number(simple.group(1)):
-            values[simple.group(2)] = int(simple.group(1))
+            my_type = 'HARD'
         else:
-            dependencies[simple.group(2)] = [simple.group(2)]
-            gates[simple.group(2)] = 'IS'
+            my_type = 'REF'
+        item = Wire(simple.group(2), my_type, simple.group(1))
+        undiscovered[item.name] = item
+        status[item.name] = hidden
     elif invert:
-        dependencies[invert.group(2)] = [invert.group(1)]
-        gates[invert.group(2)] = 'NOT'
+        item = Wire(invert.group(2), 'NOT', invert.group(1))
+        undiscovered[item.name] = item
+        status[item.name] = hidden
     elif catch:
-        dependencies[catch.group(4)] = [catch.group(1), catch.group(3)]
-        gates[catch.group(4)] = catch.group(2)
+        item = Wire(catch.group(4), catch.group(2), catch.group(1), catch.group(3))
+        undiscovered[item.name] = item
+        status[item.name] = hidden
 
 
+def reveal(my_wire):
+    status[my_wire.name] = known
+    discovered[my_wire.name] = my_wire
+    del undiscovered[my_wire.name]
 
 
-# print "The value of a is " + str(lookup('lx'))
-if dependencies.get('a') is None:
-    print values.get('a')
-print values
+while len(undiscovered) > 0:
+    reveal_list = []
+    for item in undiscovered:
+        wire = undiscovered[item]
+        if wire.gate == 'HARD':
+            wire.value = int(wire.input_1)
+            reveal_list.append(wire)
+        elif wire.gate == 'REF':
+            if status[wire.input_1] == known:
+                wire.value = int(discovered[wire.input_1].value)
+                reveal_list.append(wire)
+        elif wire.gate == 'LSHIFT':
+            if status[wire.input_1] == known and (is_number(wire.input_2) or status[wire.input_2] == known):
+                if is_number(wire.input_2):
+                    shift = int(wire.input_2)
+                elif status[wire.input_2] == known:
+                    shift = int(discovered[wire.input_2].value)
+                bits = int(discovered[wire.input_1].value)
+                wire.value = int(bits << shift)
+                reveal_list.append(wire)
+        elif wire.gate == 'RSHIFT':
+            if status[wire.input_1] == known and (is_number(wire.input_2) or status[wire.input_2] == known):
+                if is_number(wire.input_2):
+                    shift = int(wire.input_2)
+                elif status[wire.input_2] == known:
+                    shift = int(discovered[wire.input_2].value)
+                bits = int(discovered[wire.input_1].value)
+                wire.value = int(bits >> shift)
+                reveal_list.append(wire)
+        elif wire.gate == 'NOT':
+            if status[wire.input_1] == known:
+                wire.value = ~int(discovered[wire.input_1].value)
+                reveal_list.append(wire)
+        elif wire.gate == 'AND':
+            if (is_number(wire.input_1) or status[wire.input_1] == known) and (
+                        is_number(wire.input_2) or status[wire.input_2] == known):
+                a = 0
+                b = 0
+                if is_number(wire.input_1):
+                    a = int(wire.input_1)
+                elif status[wire.input_1] == known:
+                    a = int(discovered[wire.input_1].value)
+                if is_number(wire.input_2):
+                    b = int(wire.input_2)
+                elif status[wire.input_2] == known:
+                    b = int(discovered[wire.input_2].value)
+                wire.value = int(a & b)
+                reveal_list.append(wire)
+        elif wire.gate == 'OR':
+            if (is_number(wire.input_1) or status[wire.input_1] == known) and (
+                        is_number(wire.input_2) or status[wire.input_2] == known):
+                a = 0
+                b = 0
+                if is_number(wire.input_1):
+                    a = int(wire.input_1)
+                elif status[wire.input_1] == known:
+                    a = int(discovered[wire.input_1].value)
+                if is_number(wire.input_2):
+                    b = int(wire.input_2)
+                elif status[wire.input_2] == known:
+                    b = int(discovered[wire.input_2].value)
+                wire.value = int(a | b)
+                reveal_list.append(wire)
+        else:
+            print "Unknown type: " + str(wire.gate)
+    for name in reveal_list:
+        reveal(name)
+    reveal_list = []
 
-# print values
+print "a is " + str(discovered['a'].value)
