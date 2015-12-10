@@ -20,7 +20,15 @@ class Path:
         return "Node_1: " + str(self.node_1) + " Node_2: " + str(self.node_2) + " Dist: " + str(self.distance)
 
 
-with open('b.txt') as f:
+def get_all_containing(name, usable_paths):
+    rv = []
+    for t in usable_paths:
+        if str(t.node_1) == str(name) or str(t.node_2) == str(name):
+            rv.append(t)
+    return rv
+
+
+with open('a.txt') as f:
     lines = f.readlines()
 
 for line in lines:
@@ -59,10 +67,16 @@ print lookup
 readable = []
 for x in solution:
     # print lookup[x]
-    readable.append(lookup[(x)])
+    readable.append(lookup[x])
     # pass
 print readable
 
+tot_dist = 0
+for i in range(len(readable)-1):
+    pass_one = []
+    pass_one += (get_all_containing(readable[i], paths))
+    pass_two = []
+    pass_two += (get_all_containing(readable[i + 1], pass_one))
+    tot_dist += int(pass_two[0].distance)
 
-for i in range(len(readable)):
-    print
+print tot_dist
