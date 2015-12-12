@@ -17,10 +17,12 @@ def assess(item):
         return sum([assess(x) for x in item])
     elif type(item) is not dict:
         return 0
-    elif 'red' in item.values():
+    elif type(item) is dict and 'red' in item.values():
         return 0
     else:
-        return assess([item.values()])
+        capture = [item.values()]
+        # noinspection PyTypeChecker
+        return assess(capture)
 
 
 print assess(j)
