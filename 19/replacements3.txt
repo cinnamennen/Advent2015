@@ -1,0 +1,5 @@
+AL => ALal
+B => Bb
+E => Ee
+E => 3
+E => <3
