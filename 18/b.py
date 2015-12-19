@@ -19,7 +19,24 @@ for line in lines:
     i += 1
 
 good_update = [[None for y in range(grid_size)] for x in range(grid_size)]
+good_update[0][0] = on
+good_update[0][grid_size - 1] = on
+good_update[grid_size - 1][0] = on
+good_update[grid_size - 1][grid_size - 1] = on
+
+
+def stuck_on():
+    lights[0][0] = on
+    lights[0][grid_size - 1] = on
+    lights[grid_size - 1][0] = on
+    lights[grid_size - 1][grid_size - 1] = on
+
+
+stuck_on()
+
 update = good_update
+
+
 # print update
 
 
@@ -82,8 +99,6 @@ for iteration in range(frames):
                     print 'skipping'
             else:
                 lights[a][b] = update[a][b]
-
-                # print update[a][b],
-        # print ''
+    stuck_on()
 
 print sum(sum(l) for l in lights)
