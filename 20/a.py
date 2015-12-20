@@ -1,29 +1,28 @@
 __author__ = 'caleb'
-import numpy
+import math
+
 num = 3600000
+
+
 # num = 130
 
 # numpy.zeros(90)
 
 def factorize(n):
-    list_of_factors = []
-    for i in range(1, n + 1):
-        if n % i == 0:
-            list_of_factors.append(i)
-        # else:
-            #     print '{0} not a factor of {1}, division is {2}'.format(i, n, n % i)
-    return list_of_factors
+    lower_end = [i for i in xrange(1, int(math.sqrt(n)) + 1) if n % i == 0]
+    upper_end = [n / d for d in lower_end if n != d * d]
+    return lower_end + upper_end
 
 
 def find_it(n):
-    print factorize(9)
+    # print factorize(15)
     i = 1
     while True:
-        if sum(factorize(i)) == num:
+        if sum(factorize(i)) >= num:
             return i
         else:
             i += 1
-            print '{0} % there: {1}'.format((i*100)/num,i)
+            # print '{0} % there: {1}'.format((i * 100) / num, i)
 
 
 print find_it(num)
